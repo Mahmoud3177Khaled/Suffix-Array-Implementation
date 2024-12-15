@@ -52,7 +52,7 @@ public:
             //after sorting we update suffix ranks with which has smaller rank at offset
             tmpSuffixranks[suffixArr[0]] = 0;
             for (int i = 1; i < len; i++) {
-                
+
                 if (compare(suffixArr[i - 1], suffixArr[i], offSet)) {
                     tmpSuffixranks[suffixArr[i]] = tmpSuffixranks[suffixArr[i - 1]] + 1;
 
@@ -75,7 +75,7 @@ public:
         for (int i = 0; i < len; i++) {
             cout << suffixArr[i] << " ";
         }
-        cout << "\n";
+        cout << endl;
     }
 
 private:
