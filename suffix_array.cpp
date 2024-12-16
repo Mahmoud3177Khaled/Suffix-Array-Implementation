@@ -3,16 +3,14 @@
 using namespace std;
 
 class SuffixArray {
-private:
-    //string and its len
-    char* fullString;
-    int len;
-
     //suffix array, ranks of every suffix in the suff arr, temp SA for sorting
     int* suffixArr;
     int* Suffixranks;
-    int* tmpSuffixranks;   
-    
+    int* tmpSuffixranks;
+
+    //string and its len
+    char* fullString;
+    int len;
 
 public:
     SuffixArray(const char* input) {
@@ -34,37 +32,107 @@ public:
         suffixArr = new int[len];
         Suffixranks = new int[len];
         tmpSuffixranks = new int[len];
+
+        //initializ ranks to ascii one time
+        for (int i = 0; i < len; i++) {
+            Suffixranks[i] = fullString[i];
+            suffixArr[i] = i;
+        }
+
+    }
+
+    //compair returns which suffix has smaller suffix rank at distance offSet, -1 if over len
+    bool checksmallerSuffix(int si, int sj, int offSet) const {
+        int ranki = 0; 
+        int rankj = 0;
+        if (Suffixranks[si] != Suffixranks[sj]) {
+            return Suffixranks[si] < Suffixranks[sj];
+        } else {
+
+            if (si + offSet < len) {
+                ranki = Suffixranks[si + offSet];
+            } else { ranki = -1; }
+
+            if (sj + offSet < len) {
+                rankj = Suffixranks[sj + offSet];
+            } else { rankj = -1; }
+
+            return ranki < rankj;
+            // if ranks are equal return true to not inc rank
+        }
+    }
+
+    void mergeSort(int p, int q, int offSet, int* tempSAforSorting) {
+        
+        if (p >= q) {
+            return;
+        } 
+        
+        int r = p;
+        r += (q - p) / 2;
+
+        mergeSort(p, r, offSet, tempSAforSorting);
+        mergeSort(r + 1, q, offSet, tempSAforSorting);
+
+        merge(p, r, q, offSet, tempSAforSorting);
+    }
+
+    //merge halves and save again in the suffixArray
+    void merge(int p, int r, int q, int offSet, int* tempSAforSorting) {
+
+        int pptr = p;
+        int qptr = r + 1;
+        int tempi = p;
+
+        while (pptr <= r && qptr <= q) {
+            if (checksmallerSuffix(suffixArr[pptr], suffixArr[qptr], offSet)) {
+                tempSAforSorting[tempi++] = suffixArr[pptr++];
+            } else {
+                tempSAforSorting[tempi++] = suffixArr[qptr++];
+            }
+        }
+        while (pptr <= r) {
+            tempSAforSorting[tempi] = suffixArr[pptr];
+            tempi++;
+            pptr++;
+        }
+        while (qptr <= q) {
+            tempSAforSorting[tempi] = suffixArr[qptr];
+            tempi++;
+            qptr++;
+        }
+
+        for (int i = p; i <= q; ++i) {
+            suffixArr[i] = tempSAforSorting[i];
+        }
     }
 
     void ConstructUsingPrefixDoubling() { 
 
-        //initializ SA to each char index and SA ranks to its ascii char just for first sorting
-        for (int i = 0; i < len; i++) {
-            suffixArr[i] = i;
-            Suffixranks[i] = fullString[i];
-        }
-
         //O(logn)
         for (int offSet = 1; offSet < len; offSet *= 2) {
             
-            sortSuffixesByRankAtOffSet(offSet);
+            // sort suffixArr based on rankArr
+            int* tempSAforSorting = new int[len];
+            mergeSort(0, len - 1, offSet, tempSAforSorting);
 
             //after sorting we update suffix ranks with which has smaller rank at offset
-            tmpSuffixranks[suffixArr[0]] = 0;
-            for (int i = 1; i < len; i++) {
+            for (int i = 0; i < len; i++) {
 
-                if (compare(suffixArr[i - 1], suffixArr[i], offSet)) {
-                    tmpSuffixranks[suffixArr[i]] = tmpSuffixranks[suffixArr[i - 1]] + 1;
+                if(i == 0) {
+                    tmpSuffixranks[suffixArr[0]] = 0;
+                    continue;
 
                 } else {
-                    tmpSuffixranks[suffixArr[i]] = tmpSuffixranks[suffixArr[i - 1]];
-
+                    tmpSuffixranks[suffixArr[i]] = tmpSuffixranks[suffixArr[i-1]];
+                    if (checksmallerSuffix(suffixArr[i-1], suffixArr[i], offSet)) {
+                        tmpSuffixranks[suffixArr[i]]++;
+                    }
                 }
-
             }
 
             //set SA ranks to the constructed tempSAranks
-            for (int i = 0; i < len; ++i) {
+            for (int i = 0; i < len; i++) {
                 Suffixranks[i] = tmpSuffixranks[i];
 
             }
@@ -76,66 +144,6 @@ public:
             cout << suffixArr[i] << " ";
         }
         cout << endl;
-    }
-
-private:
-    //compair returns which suffix has smaller suffix rank at distance offSet, -1 if over len
-    bool compare(int i, int j, int offSet) const {
-        if (Suffixranks[i] != Suffixranks[j]) {
-            return Suffixranks[i] < Suffixranks[j];
-        }
-        int ranki = (i + offSet < len) ? Suffixranks[i + offSet] : -1;
-        int rankj = (j + offSet < len) ? Suffixranks[j + offSet] : -1;
-        return ranki < rankj;
-        // if ranks are equal return false to not inc rank
-    }
-
-    //sort based on smaller = has smaller rank at offset   O(nlogn)
-    void sortSuffixesByRankAtOffSet(int offSet) {
-        
-        int* tempSAforSorting = new int[len];
-        mergeSort(0, len - 1, offSet, tempSAforSorting);
-
-    }
-
-    void mergeSort(int left, int right, int offSet, int* tempSAforSorting) {
-
-        if (left >= right) {
-            return;
-        } 
-
-        int mid = left + (right - left) / 2;
-
-        mergeSort(left, mid, offSet, tempSAforSorting);
-        mergeSort(mid + 1, right, offSet, tempSAforSorting);
-
-        merge(left, mid, right, offSet, tempSAforSorting);
-    }
-
-    //merge halves and save again in the suffixArray
-    void merge(int left, int mid, int right, int offSet, int* tempSAforSorting) {
-
-        int i = left, j = mid + 1, idx = left;
-
-        while (i <= mid && j <= right) {
-            if (compare(suffixArr[i], suffixArr[j], offSet)) {
-                tempSAforSorting[idx++] = suffixArr[i++];
-            } else {
-                tempSAforSorting[idx++] = suffixArr[j++];
-            }
-        }
-
-        while (i <= mid) {
-            tempSAforSorting[idx++] = suffixArr[i++];
-        }
-
-        while (j <= right) {
-            tempSAforSorting[idx++] = suffixArr[j++];
-        }
-
-        for (int i = left; i <= right; ++i) {
-            suffixArr[i] = tempSAforSorting[i];
-        }
     }
 };
 
